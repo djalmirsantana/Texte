@@ -3,42 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Página do Administrador</title>
-    <link rel="stylesheet" href="style.css">
+    <title>GPS - Meus Locais</title>
     <style>
-        body {
-            background: linear-gradient(135deg, #11998e, #38ef7d);
-            padding: 20px;
-        }
-        .pagina {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .botao-voltar {
-            background: #ef4444;
-            margin-top: 20px;
-        }
-        .botao-voltar:hover {
-            background: #dc2626;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+        body { padding: 20px; background: #f0f4f8; }
+        h1 { text-align: center; color: #2d3748; margin-bottom: 20px; }
+        .card { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        input, button { padding: 10px; margin: 5px 0; border-radius: 8px; border: 1px solid #ddd; width: 100%; font-size: 16px; }
+        button { background: #3182ce; color: white; border: none; cursor: pointer; margin-top: 8px; }
+        button:hover { background: #2b6cb0; }
+        .btn-excluir { background: #e53e3e; margin-left: 10px; width: auto; }
+        .local-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .coords { font-size: 12px; color: #718096; margin-top: 4px; }
+        .status { margin-top: 10px; padding: 10px; border-radius: 8px; background: #f7fafc; }
+        .chegou { background: #f0fff4; border: 2px solid #48bb78; color: #22543d; font-weight: bold; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+        .info { font-size: 14px; color: #4a5568; margin-top: 5px; }
     </style>
 </head>
 <body>
-<img src="https://mega.nz/file/SeBQlZzD#ENvHEvmOtWxK98mZfawZlw7Uj8NCXi7912-oqJxgtlM" alt="mega">
 
-    <div class="pagina">
-        <h1>texte feito com sucesso</h1>
-        <p>Esta é a página exclusiva do admin. <strong>Edite tudo aqui do jeito que quiser!</strong></p>
+<h1>📍 GPS - Meus Locais</h1>
+
+<!-- 📍 Localização Atual -->
+<div class="card">
+    <h3>Sua Posição Atual</h3>
+    <div id="posicao-atual">Obtendo GPS...</div>
+    <div class="info" id="precisao"></div>
+</div>
+
+<!-- ➕ Adicionar Novo Local -->
+<div class="card">
+    <h3>Adicionar Local</h3>
+    <input type="text" id="nome-local" placeholder="Nome do lugar (ex: Casa, Escola)">
+    <input type="text" id="mensagem-local" placeholder="Mensagem quando chegar (ex: Cheguei em casa!)">
+    <button onclick="adicionarLocalDaPosicaoAtual()">📍 Salvar na posição atual</button>
+    <p style="font-size:12px; color:#718096; margin-top:5px;">Ou defina distância de aviso:</p>
+    <input type="number" id="raio-aviso" placeholder="Distância em metros (padrão: 50)" value="50">
+</div>
+
+<!-- 📋 Lista de Locais Salvos -->
+<div class="card">
+    <h3>Locais Salvos (<span id="qtd-locais">0</span>)</h3>
+    <div id="lista-locais"></div>
+</div>
+
+<!-- 🔔 Status de Chegada -->
+<div class="card status" id="status-aviso">
+    Monitorando... se aproxime de um local salvo.
+</div>
+
+<script>
+// === CONFIGURAÇÃO ===
+let locais = JSON.parse(localStorage.getItem('locais')) || [];
+let minhaPosicao = null;
+const raioPadrao = 50; // metros
+
+// === INICIAR GPS ===
+if ("geolocation" in navigator) {
+    navigator.geolocation.watchPosition(
+        posicaoSucesso,
+        posicaoErro,
+        { enableHighAccuracy: true, maximumAge: 10000, timeout: 5000 }
+    );
+} else {
+    alert("❌ Seu navegador não suporta GPS! Use no celular.");
+}
+
+// === RECEBER POSIÇÃO DO GPS ===
+function posicaoSucesso(pos) {
+    minhaPosicao = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        precisao: pos.coords.accuracy
+    };
+
+    document.getElementById('posicao-atual').innerHTML = 
+        `Lat: ${minhaPosicao.lat.toFixed(6)}<br>Lng: ${minhaPosicao.lng.toFixed(6)}`;
+    document.getElementById('precisao').textContent = 
+        `Precisão: ${Math.round(minhaPosicao.precisao)} metros`;
+
+    verificarProximidade();
+}
+
+function posicaoErro(erro) {
+    document.getElementById('posicao-atual').innerHTML = 
+        `Erro ao obter localização: ${erro.message}<br>Ative a permissão de localização!`;
+}
+
+// === ADICIONAR LOCAL NA POSIÇÃO ATUAL ===
+function adicionarLocalDaPosicaoAtual() {
+    if (!minhaPosicao) {
+        alert("Aguardando sinal do GPS... tente novamente em instantes.");
+        return;
+    }
+
+    const nome = document.getElementById('nome-local').value.trim();
+    const mensagem = document.getElementById('mensagem-local').value.trim();
+    const raio = parseInt(document.getElementById('raio-aviso').value) || raioPadrao;
+
+    if (!nome || !mensagem) {
+        alert("Preencha o nome e a mensagem!");
+        return;
+    }
+
+    locais.push({
+        id: Date.now(),
+        nome: nome,
+        mensagem: mensagem,
+        lat: minhaPosicao.lat,
+        lng: minhaPosicao.lng,
+        raio: raio
+    });
+
+    salvarLocais();
+    atualizarLista();
+    
+    // Limpar campos
+    document.getElementById('nome-local').value = '';
+    document.getElementById('mensagem-local').value = '';
+    
+    alert(`✅ Local "${nome}" salvo!`);
+}
+
+// === CALCULAR DISTÂNCIA (fórmula de Haversine) ===
+function calcularDistancia(lat1, lng1, lat2, lng2) {
+    const R = 6371000; // raio da Terra em metros
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c; // distância em metros
+}
+
+// === VERIFICAR SE CHEGOU EM ALGUM LOCAL ===
+function verificarProximidade() {
+    if (!minhaPosicao || locais.length === 0) return;
+
+    let chegouEmAlgum = false;
+    
+    for (const local of locais) {
+        const distancia = calcularDistancia(minhaPosicao.lat, minhaPosicao.lng, local.lat, local.lng);
         
-        <!-- ✅ Coloque imagens, textos, botões, vídeos... O QUE QUISER! -->
+        if (distancia <= local.raio) {
+            chegouEmAlgum = true;
+            const statusEl = document.getElementById('status-aviso');
+            
+            // Evita repetir aviso igual
+            if (statusEl.dataset.ultimoAviso !== local.id.toString()) {
+                statusEl.dataset.ultimoAviso = local.id;
+                statusEl.className = 'status chegou';
+                statusEl.innerHTML = `✅ ${local.mensagem}<br><small>📍 ${local.nome}</small>`;
+                
+                // Notificação do sistema se permitido
+                if (Notification.permission === 'granted') {
+                    new Notification("📍 Chegada confirmada!", { body: local.mensagem });
+                }
+            }
+            break;
+        }
+    }
 
-        <button class="botao-voltar" onclick="window.location.href='index.html'">
-            🔙 Sair / Voltar ao Login
-        </button>
-    </div>
+    if (!chegouEmAlgum) {
+        document.getElementById('status-aviso').className = 'status';
+        document.getElementById('status-aviso').innerHTML = 'Ainda em trânsito...';
+    }
+}
+
+// === SALVAR E CARREGAR ===
+function salvarLocais() {
+    localStorage.setItem('locais', JSON.stringify(locais));
+}
+
+function excluirLocal(id) {
+    locais = locais.filter(l => l.id !== id);
+    salvarLocais();
+    atualizarLista();
+}
+
+function atualizarLista() {
+    const lista = document.getElementById('lista-locais');
+    document.getElementById('qtd-locais').textContent = locais.length;
+    
+    if (locais.length === 0) {
+        lista.innerHTML = '<p style="color:#718096; font-size:14px;">Nenhum local salvo ainda.</p>';
+        return;
+    }
+
+    lista.innerHTML = locais.map(local => `
+        <div class="local-item">
+            <div>
+                <strong>${local.nome}</strong>
+                <div class="coords">${local.lat.toFixed(4)}, ${local.lng.toFixed(4)} • ${local.raio}m</div>
+                <div style="font-size:12px; color:#48bb78;">"${local.mensagem}"</div>
+            </div>
+            <button class="btn-excluir" onclick="excluirLocal(${local.id})">✕</button>
+        </div>
+    `).join('');
+}
+
+// === PEDIR PERMISSÃO DE NOTIFICAÇÃO ===
+if (Notification.permission === 'default') {
+    Notification.requestPermission();
+}
+
+// Inicializar lista ao carregar
+atualizarLista();
+</script>
 
 </body>
 </html>
