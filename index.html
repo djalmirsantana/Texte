@@ -1,192 +1,219 @@
- <!DOCTYPE html>
+
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Palpites de Futebol ⚽</title>
+<title>GPS - Rotas Mais Próximo</title>
 <style>
-*{margin:0; padding:0; box-sizing:border-box; font-family:Arial, sans-serif}
-body{background:#0f2027; color:#fff; min-height:100vh; padding:20px}
-.container{max-width:600px; margin:0 auto}
-h1{text-align:center; margin-bottom:25px; font-size:1.8rem; color:#4ade80}
-.aviso{background:#fef3c7; color:#92400e; padding:12px; border-radius:10px; margin-bottom:20px; text-align:center; font-size:0.9rem}
-.card{background:#1e3a5f; padding:20px; border-radius:14px; margin-bottom:20px; box-shadow:0 4px 12px rgba(0,0,0,0.3)}
-h2{font-size:1.1rem; margin-bottom:15px; color:#93c5fd}
-input, select, button{width:100%; padding:12px; margin:6px 0; border:none; border-radius:8px; font-size:1rem}
-input, select{background:#0f2b48; color:#fff; border:1px solid #2c5375}
-button{background:#22c55e; color:#fff; font-weight:bold; cursor:pointer; transition:0.2s}
-button:hover{background:#16a34a}
-.btn-vermelho{background:#ef4444; margin-top:8px}
-.btn-vermelho:hover{background:#dc2626}
-.jogo{background:#1a365d; padding:15px; border-radius:10px; margin:10px 0; border-left:4px solid #4ade80}
-.time-row{display:flex; align-items:center; gap:8px; margin:8px 0}
-.time{flex:1}
-.placar{width:50px; text-align:center; padding:8px; background:#0f2b48; border-radius:6px; border:1px solid #2c5375; color:#fff}
-.palpite-resultado{margin-top:10px; padding:8px; background:#0f3460; border-radius:6px; font-weight:bold; color:#facc15}
-.data{font-size:0.8rem; color:#94a3b8; margin-bottom:8px}
-.empty{text-align:center; color:#94a3b8; padding:20px}
+*{margin:0; padding:0; box-sizing:border-box; font-family:Arial, sans-serif;}
+body{padding:15px; background:#f0f4f8;}
+h1{text-align:center; color:#2c3e50; margin-bottom:15px; font-size:1.4rem;}
+h2{font-size:1.1rem; margin:10px 0; color:#34495e;}
+.painel{background:white; padding:15px; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:15px;}
+.oculto{display:none !important;}
+.btn{padding:10px 15px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; margin:5px;}
+.btn-verde{background:#27ae60; color:white;}
+.btn-azul{background:#3498db; color:white;}
+.btn-vermelho{background:#e74c3c; color:white;}
+.btn-laranja{background:#f39c12; color:white;}
+input{width:100%; padding:10px; margin:5px 0; border:1px solid #ddd; border-radius:6px;}
+.local-item{padding:10px; border-bottom:1px solid #eee;}
+.local-item.ativo{background:#e8f8f5; border-left:4px solid #27ae60;}
+.distancia{color:#7f8c8d; font-size:0.9rem;}
+.chegou{background:#d4edda; color:#155724; padding:10px; border-radius:8px; text-align:center; font-weight:bold; margin:10px 0; animation: pulse 1s infinite;}
+@keyframes pulse{0%{opacity:1;}50%{opacity:0.7;}100%{opacity:1;}}
+#area-impressao{position:fixed; left:-9999px; background:white; padding:20px; width:300px;}
+.senha-area{max-width:400px; margin:50px auto; text-align:center;}
 </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>⚽ Palpites de Futebol</h1>
+<!-- TELA DE ACESSO -->
+<div id="tela-senha" class="senha-area">
+  <h1>🔐 Acesso Restrito</h1>
+  <input type="password" id="senha-acesso" placeholder="Digite sua senha">
+  <button class="btn btn-verde" onclick="verificarSenha()">Entrar</button>
+  <p style="margin-top:10px; color:#88; font-size:0.9rem;">Apenas o administrador pode adicionar locais</p>
+</div>
 
-  <div class="aviso">
-    ⚠️ Apenas para diversão — NÃO há garantia de acerto
+<!-- CONTEÚDO PRINCIPAL -->
+<div id="conteudo" class="oculto">
+  <h1>📍 GPS - Rota Mais Próximo</h1>
+
+  <!-- ÁREA ADMINISTRADOR (só você vê) -->
+  <div id="painel-admin" class="painel oculto">
+    <h2>⚙️ Adicionar Novo Local</h2>
+    <input type="text" id="nome-local" placeholder="Nome do Local">
+    <input type="number" step="any" id="lat-local" placeholder="Latitude (ex: -26.45)">
+    <input type="number" step="any" id="lng-local" placeholder="Longitude (ex: -49.62)">
+    <button class="btn btn-verde" onclick="adicionarLocal()">✅ Salvar Local</button>
+    <button class="btn btn-vermelho" onclick="limparTodosLocais()">🗑️ Limpar Tudo</button>
   </div>
 
-  <!-- Cadastrar Jogo -->
-  <div class="card">
-    <h2>📅 Cadastrar Jogo</h2>
-    <input type="text" id="timeCasa" placeholder="Time da Casa" required>
-    <input type="text" id="timeFora" placeholder="Time Visitante" required>
-    <input type="date" id="dataJogo">
-    <button onclick="cadastrarJogo()">Adicionar Jogo</button>
+  <!-- MINHA POSIÇÃO -->
+  <div class="painel">
+    <h2>📡 Minha Posição</h2>
+    <p id="minha-posicao">Buscando GPS...</p>
+    <button class="btn btn-azul" onclick="atualizarGPS()">🔄 Atualizar</button>
   </div>
 
-  <!-- Fazer Palpite -->
-  <div class="card">
-    <h2>✍️ Fazer Palpite</h2>
-    <select id="jogoSelecionado">
-      <option value="">Selecione um jogo...</option>
-    </select>
-    <div class="time-row">
-      <span class="time">Placar Casa</span>
-      <input type="number" id="palpiteCasa" class="placar" min="0" value="0">
-      <span>X</span>
-      <input type="number" id="palpiteFora" class="placar" min="0" value="0">
-      <span class="time">Placar Fora</span>
-    </div>
-    <button onclick="salvarPalpite()">💾 Salvar Palpite</button>
+  <!-- LISTA DE LOCAIS ORDENADA -->
+  <div class="painel">
+    <h2>📍 Locais - Mais Próximo Primeiro</h2>
+    <div id="lista-locais"></div>
   </div>
 
-  <!-- Meus Palpites -->
-  <div class="card">
-    <h2>📋 Meus Palpites</h2>
-    <div id="listaPalpites">
-      <p class="empty">Nenhum palpite salvo ainda</p>
-    </div>
-    <button class="btn-vermelho" onclick="limparTudo()">🗑️ Limpar Todos</button>
+  <!-- ALERTA AO CHEGAR -->
+  <div id="alerta-chegada" class="oculto chegou">
+    ✅ VOCÊ CHEGOU AO DESTINO!<br>
+    <button class="btn btn-laranja" onclick="gerarImpressao()">🖨️ Imprimir Comprovante</button>
+  </div>
+
+  <!-- ÁREA OCULTA PARA IMPRESSÃO -->
+  <div id="area-impressao">
+    <h3 style="text-align:center; margin-bottom:10px;">COMPROVANTE DE VISITA</h3>
+    <p><strong>Local:</strong> <span id="imp-nome"></span></p>
+    <p><strong>Data/Hora:</strong> <span id="imp-data"></span></p>
+    <p><strong>Coordenadas:</strong> <span id="imp-coord"></span></p>
+    <p style="text-align:center; margin-top:20px;">_____________________</p>
+    <p style="text-align:center;">Assinatura</p>
   </div>
 </div>
 
 <script>
-let jogos = JSON.parse(localStorage.getItem('jogos')) || [];
-let palpites = JSON.parse(localStorage.getItem('palpites')) || [];
+// ========== CONFIGURAÇÕES ==========
+const SENHA_ADMIN = "12345"; // 🔴 TROQUE pela sua senha!
+const RAIO_AVISO = 0.05; // 50 metros = 0.05 km
+let minhaPosicao = null;
+let locais = [];
+let localAlvoAtual = null;
 
-// Atualizar lista de jogos no select
-function atualizarSelect() {
-  const select = document.getElementById('jogoSelecionado');
-  select.innerHTML = '<option value="">Selecione um jogo...</option>';
-  jogos.forEach((jogo, idx) => {
-    const opt = document.createElement('option');
-    opt.value = idx;
-    opt.textContent = `${jogo.timeCasa} vs ${jogo.timeFora} — ${jogo.data}`;
-    select.appendChild(opt);
-  });
+// Carregar locais salvos
+function carregarLocais(){
+  const salvos = localStorage.getItem('locaisSistema');
+  if(salvos) locais = JSON.parse(salvos);
+}
+function salvarLocais(){
+  localStorage.setItem('locaisSistema', JSON.stringify(locais));
 }
 
-// Cadastrar novo jogo
-function cadastrarJogo() {
-  const timeCasa = document.getElementById('timeCasa').value.trim();
-  const timeFora = document.getElementById('timeFora').value.trim();
-  const data = document.getElementById('dataJogo').value;
-
-  if(!timeCasa || !timeFora) {
-    alert('Preencha os dois times!');
-    return;
+// ========== TELA DE SENHA ==========
+function verificarSenha(){
+  const senha = document.getElementById('senha-acesso').value;
+  if(senha === SENHA_ADMIN){
+    document.getElementById('tela-senha').classList.add('oculto');
+    document.getElementById('conteudo').classList.remove('oculto');
+    document.getElementById('painel-admin').classList.remove('oculto');
+    carregarLocais();
+    iniciarGPS();
+  }else{
+    alert('Senha incorreta!');
   }
-
-  jogos.push({ timeCasa, timeFora, data });
-  salvarDados();
-  atualizarSelect();
-  document.getElementById('timeCasa').value = '';
-  document.getElementById('timeFora').value = '';
-  alert('✅ Jogo cadastrado!');
 }
 
-// Salvar palpite
-function salvarPalpite() {
-  const idx = document.getElementById('jogoSelecionado').value;
-  const palpiteCasa = parseInt(document.getElementById('palpiteCasa').value) || 0;
-  const palpiteFora = parseInt(document.getElementById('palpiteFora').value) || 0;
-
-  if(idx === '') {
-    alert('Selecione um jogo!');
+// ========== GPS ==========
+function iniciarGPS(){
+  if(!navigator.geolocation){
+    alert('Seu navegador não suporta GPS');
     return;
   }
+  navigator.geolocation.watchPosition(
+    pos => {
+      minhaPosicao = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+      document.getElementById('minha-posicao').innerHTML = 
+        `Lat: ${minhaPosicao.lat.toFixed(6)}<br>Lng: ${minhaPosicao.lng.toFixed(6)}`;
+      ordenarLocaisPorProximidade();
+      verificarChegada();
+    },
+    err => console.log('Erro GPS:', err),
+    {enableHighAccuracy: true, maximumAge: 10000}
+  );
+}
+function atualizarGPS(){ iniciarGPS(); }
 
-  const jogo = jogos[idx];
-  
-  // Determinar resultado do palpite
-  let resultado;
-  if(palpiteCasa > palpiteFora) resultado = `🏆 ${jogo.timeCasa} vence`;
-  else if(palpiteFora > palpiteCasa) resultado = `🏆 ${jogo.timeFora} vence`;
-  else resultado = '🤝 Empate';
-
-  palpites.unshift({
-    ...jogo,
-    palpiteCasa,
-    palpiteFora,
-    resultado,
-    dataPalpite: new Date().toLocaleString('pt-BR')
-  });
-
-  salvarDados();
-  renderizarPalpites();
-  document.getElementById('palpiteCasa').value = 0;
-  document.getElementById('palpiteFora').value = 0;
-  document.getElementById('jogoSelecionado').value = '';
-  alert('✅ Palpite salvo!');
+// ========== CÁLCULO DE DISTÂNCIA ==========
+function calcularDistancia(lat1, lng1, lat2, lng2){
+  const R = 6371; // raio da Terra em km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// Renderizar palpites na tela
-function renderizarPalpites() {
-  const div = document.getElementById('listaPalpites');
-  if(palpites.length === 0) {
-    div.innerHTML = '<p class="empty">Nenhum palpite salvo ainda</p>';
-    return;
-  }
+// ========== ORDENAR MAIS PRÓXIMO ==========
+function ordenarLocaisPorProximidade(){
+  if(!minhaPosicao || locais.length === 0) return;
+  locais.sort((a,b) => 
+    calcularDistancia(minhaPosicao.lat, minhaPosicao.lng, a.lat, a.lng) -
+    calcularDistancia(minhaPosicao.lat, minhaPosicao.lng, b.lat, b.lng)
+  );
+  renderizarLista();
+}
 
-  div.innerHTML = '';
-  palpites.forEach((p, i) => {
-    const card = document.createElement('div');
-    card.className = 'jogo';
-    card.innerHTML = `
-      <div class="data">📅 ${p.data} — ${p.dataPalpite}</div>
-      <strong>${p.timeCasa}</strong> vs <strong>${p.timeFora}</strong>
-      <div class="time-row" style="margin-top:8px">
-        <span class="time">Palpite:</span>
-        <span style="font-size:1.2rem; font-weight:bold">${p.palpiteCasa} X ${p.palpiteFora}</span>
-      </div>
-      <div class="palpite-resultado">${p.resultado}</div>
+// ========== RENDERIZAR LISTA ==========
+function renderizarLista(){
+  const container = document.getElementById('lista-locais');
+  container.innerHTML = '';
+  locais.forEach((local, indice) => {
+    const dist = calcularDistancia(minhaPosicao.lat, minhaPosicao.lng, local.lat, local.lng);
+    const div = document.createElement('div');
+    div.className = `local-item ${indice===0?'ativo':''}`;
+    div.innerHTML = `
+      <strong>${indice+1}. ${local.nome}</strong>
+      <div class="distancia">📍 ${dist.toFixed(2)} km de você</div>
     `;
-    div.appendChild(card);
+    container.appendChild(div);
   });
+  if(locais.length>0) localAlvoAtual = locais[0];
 }
 
-// Salvar no armazenamento do navegador
-function salvarDados() {
-  localStorage.setItem('jogos', JSON.stringify(jogos));
-  localStorage.setItem('palpites', JSON.stringify(palpites));
-}
-
-// Limpar tudo
-function limparTudo() {
-  if(confirm('Tem certeza? Isso apaga TODOS os palpites e jogos!')) {
-    jogos = [];
-    palpites = [];
-    salvarDados();
-    atualizarSelect();
-    renderizarPalpites();
+// ========== VERIFICAR CHEGADA ==========
+function verificarChegada(){
+  if(!localAlvoAtual || !minhaPosicao) return;
+  const dist = calcularDistancia(minhaPosicao.lat, minhaPosicao.lng, localAlvoAtual.lat, localAlvoAtual.lng);
+  if(dist <= RAIO_AVISO){
+    document.getElementById('alerta-chegada').classList.remove('oculto');
+    document.getElementById('imp-nome').textContent = localAlvoAtual.nome;
+    document.getElementById('imp-data').textContent = new Date().toLocaleString('pt-BR');
+    document.getElementById('imp-coord').textContent = `${localAlvoAtual.lat.toFixed(6)}, ${localAlvoAtual.lng.toFixed(6)}`;
+  }else{
+    document.getElementById('alerta-chegada').classList.add('oculto');
   }
 }
 
-// Inicializar
-atualizarSelect();
-renderizarPalpites();
-</script>
+// ========== ADICIONAR/EXCLUIR LOCAIS ==========
+function adicionarLocal(){
+  const nome = document.getElementById('nome-local').value.trim();
+  const lat = parseFloat(document.getElementById('lat-local').value);
+  const lng = parseFloat(document.getElementById('lng-local').value);
+  if(!nome || isNaN(lat) || isNaN(lng)){
+    alert('Preencha todos os campos corretamente!');
+    return;
+  }
+  locais.push({nome, lat, lng});
+  salvarLocais();
+  document.getElementById('nome-local').value='';
+  document.getElementById('lat-local').value='';
+  document.getElementById('lng-local').value='';
+  alert('✅ Local salvo!');
+  ordenarLocaisPorProximidade();
+}
+function limparTodosLocais(){
+  if(confirm('Tem certeza? Apaga TODOS os locais!')){
+    locais = []; salvarLocais(); renderizarLista();
+  }
+}
 
+// ========== IMPRIMIR COMO PNG / IMPRESSORA TÉRMICA ==========
+function gerarImpressao(){
+  const area = document.getElementById('area-impressao');
+  // Opção 1: Impressão direta (ideal para impressora térmica)
+  window.print();
+}
+
+// Ao abrir, carrega os locais
+carregarLocais();
+</script>
 </body>
 </html>
