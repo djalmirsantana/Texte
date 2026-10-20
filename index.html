@@ -1,20 +1,7 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+<button id="btnImprimir">Imprimir</button>
 
-  <title>vigilante</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-  <img src="https://mega.nz/file/SeBQlZzD#ENvHEvmOtWxK98mZfawZlw7Uj8NCXi7912-oqJxgtlM" alt="foto" />
-  <p id="a">começa cobrança</p>
-  <p>casas</p>
-  <p>valor total</p>
-  <p>percas</p>
-  <script src="main.js"></script>
-</body>
-</html>
+<script>
+  document.getElementById('btnImprimir').addEventListener('click', function() {
+    window.print();
+  });
+</script>
